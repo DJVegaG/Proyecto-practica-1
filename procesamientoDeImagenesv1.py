@@ -50,7 +50,23 @@ def conectar_desconectar_arduino():
             boton_conectar_desconectar.config(text="Desconectar")
     else:
         desconectar_arduino(arduino, label_estado)
+        arduino = None
         boton_conectar_desconectar.config(text="Conectar")
+
+def enviar_datos_arduino(velocidad, posicion, letra, arduino, label_estado):
+    try:
+        datos = f"{velocidad},{posicion},{letra}"
+        arduino.write(datos.encode())
+        label_estado.config(text=f"Datos enviados: {datos}")
+    except Exception as e:
+        label_estado.config(text=f"Error al enviar datos: {e}")
+
+def enviar_datos_arduino_desde_ui():
+    velocidad = int(entrada_velocidad.get())
+    posicion = int(entrada_posicion.get())
+    letra = int(entrada_letra.get())
+
+    enviar_datos_arduino(velocidad, posicion, letra, arduino, label_estado)
 
 # Función para obtener la lista de cámaras conectadas
 def obtener_camaras_disponibles():
@@ -235,6 +251,29 @@ boton_conectar_desconectar.bind("<Button-1>", lambda event: conectar_desconectar
 # Etiqueta para mostrar el estado de la conexión
 label_estado = tk.Label(ventana, text="", wraplength=200, justify="left")
 label_estado.place(x=190, y=600, width=200, height=30)
+
+label_velocidad = tk.Label(ventana, text="Velocidad:")
+label_velocidad.place(x=50, y=630, width=150, height=20)
+
+entrada_velocidad = tk.Entry(ventana)
+entrada_velocidad.place(x=50, y=650, width=150, height=30)
+
+label_posicion = tk.Label(ventana, text="Posición:")
+label_posicion.place(x=210, y=630, width=150, height=20)
+
+entrada_posicion = tk.Entry(ventana)
+entrada_posicion.place(x=210, y=650, width=150, height=30)
+
+label_letra = tk.Label(ventana, text="Letra:")
+label_letra.place(x=370, y=630, width=150, height=20)
+
+entrada_letra = tk.Entry(ventana)
+entrada_letra.place(x=370, y=650, width=150, height=30)
+
+boton_enviar = tk.Button(ventana,
+                         text="Enviar",
+                         command=enviar_datos_arduino_desde_ui)
+boton_enviar.place(x=530, y=650, width=120, height=30)
 
 # Iniciar la ventana
 ventana.mainloop()

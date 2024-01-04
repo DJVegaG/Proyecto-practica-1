@@ -11,32 +11,27 @@ captura1 = None
 captura2 = None
 arduino = None
 
-# Funcion para obtener los puertos disponibles de arduino
+# Función para obtener los puertos disponibles de Arduino
 def obtener_puertos_disponibles():
-    puertos_disponibles = [
-        port.device for port in serial.tools.list_ports.comports()
-    ]
+    puertos_disponibles = [port.device for port in serial.tools.list_ports.comports()]
     return puertos_disponibles
 
-# Funcion para conectar a arduino
+# Función para conectar a Arduino
 def conectar_arduino(numero_puerto, label_estado):
     try:
         arduino = serial.Serial(port=numero_puerto, baudrate=9600, timeout=1)
-        label_estado.config(
-            text=f"Conectado a Arduino en el puerto {numero_puerto}")
+        label_estado.config(text=f"Conectado a Arduino en el puerto {numero_puerto}")
         return arduino
     except Exception as e:
         arduino = None
-        label_estado.config(
-            text=f"No se pudo conectar a Arduino en el puerto {numero_puerto}")
+        label_estado.config(text=f"No se pudo conectar a Arduino en el puerto {numero_puerto}")
         return None
 
-# Funcion para desconectar arduino
+# Función para desconectar Arduino
 def desconectar_arduino(arduino, label_estado):
     if arduino is not None:
         arduino.close()
         label_estado.config(text="Arduino desconectado")
-
 
 def conectar_desconectar_arduino():
     puerto_seleccionado = combobox_arduino.get()
@@ -53,9 +48,9 @@ def conectar_desconectar_arduino():
         arduino = None
         boton_conectar_desconectar.config(text="Conectar")
 
-def enviar_datos_arduino(velocidad, posicion, letra, arduino, label_estado):
+def enviar_datos_arduino(velocidad, posicion, arduino, label_estado):
     try:
-        datos = f"{velocidad},{posicion},{letra}"
+        datos = f"{velocidad},{posicion}"
         arduino.write(datos.encode())
         label_estado.config(text=f"Datos enviados: {datos}")
     except Exception as e:
@@ -64,9 +59,7 @@ def enviar_datos_arduino(velocidad, posicion, letra, arduino, label_estado):
 def enviar_datos_arduino_desde_ui():
     velocidad = int(entrada_velocidad.get())
     posicion = int(entrada_posicion.get())
-    letra = int(entrada_letra.get())
-
-    enviar_datos_arduino(velocidad, posicion, letra, arduino, label_estado)
+    enviar_datos_arduino(velocidad, posicion, arduino, label_estado)
 
 # Función para obtener la lista de cámaras conectadas
 def obtener_camaras_disponibles():
@@ -162,7 +155,7 @@ def desconectar_camara_2():
 def seleccionar_destino():
     carpeta_destino = filedialog.askdirectory()
     entrada_nombre.delete(0, tk.END)  # Limpiar la entrada
-    entrada_nombre.insert(0, "nombre_archivo")  # Establecer un nombre predeterminado
+    entrada_nombre.insert(0, "img_prueba")  # Establecer un nombre predeterminado
     etiqueta_ruta.config(text=carpeta_destino)
 
 def cerrar_ventana():
@@ -184,14 +177,18 @@ ventana.protocol("WM_DELETE_WINDOW", cerrar_ventana)
 lista_camaras = obtener_camaras_disponibles()
 
 # Combobox y botón para la primera cámara
-combobox_camara1 = ttk.Combobox(ventana, values=lista_camaras)
+combobox_camara1 = ttk.Combobox(ventana, values=lista_camaras, state="readonly")
 combobox_camara1.set("Selecciona una cámara")
 combobox_camara1.place(x=75, y=330, width=200, height=23)
+label_camara1 = tk.Label(ventana, text="Cámara 1:")
+label_camara1.place(x=75, y=305, width=60, height=23)
 
 # Combobox y botón para la segunda cámara
-combobox_camara2 = ttk.Combobox(ventana, values=lista_camaras)
+combobox_camara2 = ttk.Combobox(ventana, values=lista_camaras, state="readonly")
 combobox_camara2.set("Selecciona una cámara")
 combobox_camara2.place(x=415, y=330, width=200, height=23)
+label_camara2 = tk.Label(ventana, text="Cámara 2:")
+label_camara2.place(x=415, y=305, width=60, height=23)
 
 # Botones para conectar cámaras y capturar imágenes
 boton_conectar1 = tk.Button(ventana, text="Conectar", command=lambda: conectar_camara_1(combobox_camara1.current(), label_imagen1))
@@ -222,24 +219,30 @@ etiqueta_nombre.place(x=50, y=500, width=150, height=20)
 
 entrada_nombre = tk.Entry(ventana)
 entrada_nombre.place(x=190, y=500, width=150, height=30)
-entrada_nombre.insert(0, "nombre_archivo")
+entrada_nombre.insert(0, "img_prueba")
 
 # Cuadros de Imagen grises
 label_imagen1 = tk.Label(ventana, background="gray")
 label_imagen1.place(x=50, y=50, width=300, height=250)
+label_muestraImagen1 = tk.Label(ventana, text="Muestra de camara 1:")
+label_muestraImagen1.place(x=50, y=30, width=300, height=20)
 
 label_imagen2 = tk.Label(ventana, background="gray")
 label_imagen2.place(x=390, y=50, width=300, height=250)
+label_muestraImagen2 = tk.Label(ventana, text="Muestra de camara 2:")
+label_muestraImagen2.place(x=390, y=30, width=300, height=20)
 
 # Cuadros de Imagen capturada
 label_captura = tk.Label(ventana, background="gray")
 label_captura.place(x=730, y=50, width=300, height=250)
+label_muestraCaptura = tk.Label(ventana, text="Muestra de captura:")
+label_muestraCaptura.place(x=730, y=30, width=300, height=20)
 
 # Obtener puertos de Arduino disponibles
 puertos_arduino = obtener_puertos_disponibles()
 
 # Combobox y botón para conectar a Arduino
-combobox_arduino = ttk.Combobox(ventana, values=puertos_arduino)
+combobox_arduino = ttk.Combobox(ventana, values=puertos_arduino, state="readonly")
 combobox_arduino.set("Selecciona un puerto")
 combobox_arduino.place(x=50, y=550, width=200, height=23)
 
@@ -252,6 +255,7 @@ boton_conectar_desconectar.bind("<Button-1>", lambda event: conectar_desconectar
 label_estado = tk.Label(ventana, text="", wraplength=200, justify="left")
 label_estado.place(x=190, y=600, width=200, height=30)
 
+# Entradas para enviar datos a Arduino
 label_velocidad = tk.Label(ventana, text="Velocidad:")
 label_velocidad.place(x=50, y=630, width=150, height=20)
 
@@ -264,16 +268,8 @@ label_posicion.place(x=210, y=630, width=150, height=20)
 entrada_posicion = tk.Entry(ventana)
 entrada_posicion.place(x=210, y=650, width=150, height=30)
 
-label_letra = tk.Label(ventana, text="Letra:")
-label_letra.place(x=370, y=630, width=150, height=20)
-
-entrada_letra = tk.Entry(ventana)
-entrada_letra.place(x=370, y=650, width=150, height=30)
-
-boton_enviar = tk.Button(ventana,
-                         text="Enviar",
-                         command=enviar_datos_arduino_desde_ui)
-boton_enviar.place(x=530, y=650, width=120, height=30)
+boton_enviar = tk.Button(ventana, text="Enviar", command=enviar_datos_arduino_desde_ui)
+boton_enviar.place(x=400, y=650, width=120, height=30)
 
 # Iniciar la ventana
 ventana.mainloop()

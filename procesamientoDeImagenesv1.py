@@ -9,6 +9,7 @@ import serial.tools.list_ports
 # Variables globales a utilizar para la captura
 captura1 = None
 captura2 = None
+arduino = None
 
 # Funcion para obtener la lista de cámaras conectadas
 def obtener_camaras_disponibles():
@@ -134,6 +135,59 @@ def seleccionar_destino():
     entrada_nombre.insert(0, "img_prueba")  # Establecer un nombre predeterminado
     etiqueta_ruta.config(text=carpeta_destino)
 
+# Función para obtener los puertos disponibles de Arduino
+def obtener_puertos_disponibles():
+    puertos_disponibles = [port.device for port in serial.tools.list_ports.comports()]
+    return puertos_disponibles
+
+# Función para conectar a Arduino
+def conectar_arduino(numero_puerto, label_estado):
+    try:
+        arduino = serial.Serial(port=numero_puerto, baudrate=9600, timeout=1)
+        label_estado.config(text=f"Conectado a Arduino en el puerto {numero_puerto}")
+        return arduino
+    except Exception as e:
+        arduino = None
+        label_estado.config(text=f"No se pudo conectar a Arduino en el puerto {numero_puerto}")
+        return None
+
+# Función para desconectar Arduino
+def desconectar_arduino(arduino, label_estado):
+    if arduino is not None:
+        arduino.close()
+        label_estado.config(text="Arduino desconectado")
+
+def conectar_desconectar_arduino():
+    puerto_seleccionado = combobox_arduino.get()
+    global arduino
+    if not puerto_seleccionado or puerto_seleccionado == "Selecciona un puerto":
+        label_estado.config(text="Selecciona un puerto")
+        return
+    if arduino is None:
+        arduino = conectar_arduino(puerto_seleccionado, label_estado)
+        if arduino:
+            boton_conectar_desconectar.config(text="Desconectar")
+    else:
+        desconectar_arduino(arduino, label_estado)
+        arduino = None
+        boton_conectar_desconectar.config(text="Conectar")
+
+def enviar_datos_arduino(velocidad, posicion, arduino, label_estado):
+    try:
+        datos = f"{velocidad},{posicion}"
+        arduino.write(datos.encode())
+        label_estado.config(text=f"Datos enviados: {datos}")
+    except Exception as e:
+        label_estado.config(text=f"Error al enviar datos: {e}")
+
+def enviar_datos_arduino_desde_ui():
+    velocidad = int(entrada_velocidad.get())
+    posicion = int(entrada_posicion.get())
+    enviar_datos_arduino(velocidad, posicion, arduino, label_estado)
+
+# Obtener puertos de Arduino disponibles
+puertos_arduino = obtener_puertos_disponibles()
+
 # Funcion para cerrar la ventana
 def cerrar_ventana():
     if captura1 is not None:
@@ -254,6 +308,45 @@ label_intervalo_capturas.place(x=460, y=770, width=200, height=20)
 entrada_intervalo_capturas = tk.Entry(ventana)
 entrada_intervalo_capturas.place(x=650, y=770, width=30, height=20)
 entrada_intervalo_capturas.insert(0, "1000")
+
+# Elementos de conexion con Arduino
+# Combobox y boton para conectar a Arduino
+label_conexion_arduino = tk.Label(ventana, text="Conexión con Arduino:")
+label_conexion_arduino.place(x=700, y=30, width=200, height=20)
+combobox_arduino = ttk.Combobox(ventana, values=puertos_arduino, state="readonly")
+combobox_arduino.set("Selecciona un puerto")
+combobox_arduino.place(x=700, y=50, width=200, height=23)
+
+# Boton para conectar y desconectar Arduino
+boton_conectar_desconectar = tk.Button(ventana,text="Conectar")
+boton_conectar_desconectar.place(x=910, y=50, width=120, height=30)
+boton_conectar_desconectar.bind("<Button-1>", lambda event: conectar_desconectar_arduino())
+
+# Etiqueta para mostrar el estado de la conexión
+label_estado = tk.Label(ventana, text="Conecte el arduino", wraplength=200, justify="left")
+label_estado.place(x=700, y=80, width=200, height=30)
+
+# Elementos para enviar datos a Arduino
+# Boton para enviar datos a Arduino
+boton_enviar = tk.Button(ventana, text="Enviar", command=enviar_datos_arduino_desde_ui)
+boton_enviar.place(x=740, y=220, width=120, height=30)
+
+# Titulo indicativo de envio de datos
+label_datos = tk.Label(ventana, text="Envio de datos para giro")
+label_datos.place(x=700, y=130, width=200, height=20)
+
+# Titulo para saber donde esta el cuadro de texto de velocidad
+label_velocidad = tk.Label(ventana, text="Velocidad:")
+label_velocidad.place(x=700, y=160, width=150, height=20)
+# Cuadro de texto para ingresar la velocidad
+entrada_velocidad = tk.Entry(ventana)
+entrada_velocidad.place(x=820, y=160, width=50, height=20)
+# Titulo para saber donde esta el cuadro de texto de posicion
+label_posicion = tk.Label(ventana, text="Posición:")
+label_posicion.place(x=700, y=190, width=150, height=20)
+# Cuadro de texto para ingresar la posicion
+entrada_posicion = tk.Entry(ventana)
+entrada_posicion.place(x=820, y=190, width=50, height=20)
 
 # Iniciar la ventana
 ventana.mainloop()

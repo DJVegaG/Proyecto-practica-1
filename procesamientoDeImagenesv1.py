@@ -1,15 +1,18 @@
 import tkinter as tk
-from tkinter import ttk, filedialog, StringVar
+from tkinter import ttk, filedialog
 from PIL import Image, ImageTk
 import imutils
 import cv2
 import os
 import serial.tools.list_ports
 
-# Variables globales a utilizar para la captura
+# Variables globales a utilizar
 captura1 = None
 captura2 = None
 arduino = None
+velocidades_predefinidas = [60]
+rotacion_completa = 5868
+angulos_predefinidos = [10, 15, 20, 30, 40, 45, 60, 90, 120, 180, 360]
 
 # Funcion para obtener la lista de cámaras conectadas
 def obtener_camaras_disponibles():
@@ -56,7 +59,30 @@ def iniciar_captura2(captura2, label_imagen):
             captura2.release()
 
 # Funcion para capturar y guardar la imagen
-def capturar_guardar_mostrar(captura, carpeta_destino, nombre_archivo, label_captura, camara_numero, tiempo_captura, cantidad_capturas, intervalo_capturas):
+def capturar_guardar_mostrar(captura, nombre_archivo, label_captura, camara_numero):
+    if combobox_angulos.get() == 10:
+        cantidad_capturas = 360/10
+    elif combobox_angulos.get() == 15:
+        cantidad_capturas = 360/15
+    elif combobox_angulos.get() == 20:
+        cantidad_capturas = 360/20
+    elif combobox_angulos.get() == 30:
+        cantidad_capturas = 360/30
+    elif combobox_angulos.get() == 40:
+        cantidad_capturas = 360/40
+    elif combobox_angulos.get() == 45:
+        cantidad_capturas = 360/45
+    elif combobox_angulos.get() == 60:
+        cantidad_capturas = 360/60
+    elif combobox_angulos.get() == 90:
+        cantidad_capturas = 360/90
+    elif combobox_angulos.get() == 120:
+        cantidad_capturas = 360/120
+    elif combobox_angulos.get() == 180:
+        cantidad_capturas = 360/180
+    elif combobox_angulos.get() == 360:
+        cantidad_capturas = 360/360
+
     if captura is not None:
         for i in range(int(cantidad_capturas)):
             ret, frame = captura.read()
@@ -68,17 +94,14 @@ def capturar_guardar_mostrar(captura, carpeta_destino, nombre_archivo, label_cap
                 img_tk = ImageTk.PhotoImage(image=img)
                 label_captura.configure(image=img_tk)
                 label_captura.image = img_tk
-                ruta_completa = os.path.join(carpeta_destino, f"{nombre_archivo}_camara{camara_numero}.png")
+                ruta_completa = os.path.join(etiqueta_ruta.cget("text"), f"{nombre_archivo}_camara{camara_numero}_{i + 1}.png")
                 cv2.imwrite(ruta_completa, cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-                print(f"Captura de camara {camara_numero} guardada en: {ruta_completa}")
+                print(f"Captura de camara {camara_numero}, imagen {i + 1} guardada en: {ruta_completa}")
                 ventana.update()
-                if i < int(cantidad_capturas) - 1:
-                    ventana.after(int(intervalo_capturas), lambda: None)
-                else:
-                    break
             else:
-                print("No se pudo realizar la captura de camara {camara_numero}")
+                print(f"No se pudo realizar la captura de camara {camara_numero}")
                 break
+
 
 # Funcion de conexion a la camara 1
 def conectar_camara_1(numero_camara, label_imagen):
@@ -181,9 +204,36 @@ def enviar_datos_arduino(velocidad, posicion, arduino, label_estado):
         label_estado.config(text=f"Error al enviar datos: {e}")
 
 def enviar_datos_arduino_desde_ui():
-    velocidad = int(entrada_velocidad.get())
-    posicion = int(entrada_posicion.get())
-    enviar_datos_arduino(velocidad, posicion, arduino, label_estado)
+    seleccion = combobox_velocidades.get()
+    if seleccion:
+        velocidad_seleccionada = int(seleccion)
+        enviar_datos_arduino(velocidad_seleccionada, rotacion_completa, arduino, label_estado)
+
+def dato_detencion_giratoria():
+    try:
+        dato_detencion = 0
+        global arduino
+        if arduino is not None:
+            datos = f"{dato_detencion}"
+            arduino.write(datos.encode())
+            label_estado.config(text=f"Dato de detencion enviado")
+        else:
+            label_estado.config(text="Arduino no esta conectado")
+    except Exception as e:
+        label_estado.config(text=f"Error al enviar dato de detencion")
+
+def dato_calibracion_mesa():
+    try:
+        dato_calibracion = 2
+        global arduino
+        if arduino is not None:
+            datos = f"{dato_calibracion}"
+            arduino.write(datos.encode())
+            label_estado.config(text="Calibrando la mesa")
+        else:
+            label_estado.config(text="Arduino no conectado")
+    except Exception as e:
+        label_estado.config(text=f"Error al enviar los datos de calibracion")
 
 # Obtener puertos de Arduino disponibles
 puertos_arduino = obtener_puertos_disponibles()
@@ -250,7 +300,7 @@ boton_conectar1.place(x=50, y=370, width=120, height=30)
 boton_desconectar1 = tk.Button(ventana, text="Desconectar", command=desconectar_camara_1, state=tk.DISABLED)
 boton_desconectar1.place(x=180, y=370, width=120, height=30)
 # Captura camara 1
-boton_capturar1 = tk.Button(ventana, text="Capturar", command=lambda: capturar_guardar_mostrar(captura1, etiqueta_ruta.cget("text").split(": "), entrada_nombre.get(), label_captura1, 1, entrada_tiempo_captura.get(), entrada_cantidad_capturas.get(), entrada_intervalo_capturas.get()))
+boton_capturar1 = tk.Button(ventana, text="Capturar", command=lambda: capturar_guardar_mostrar(captura1, entrada_nombre.get(), label_captura1, 1))
 boton_capturar1.place(x=130, y=720, width=120, height=30)
 # Conexion camara 2
 boton_conectar2 = tk.Button(ventana, text="Conectar", command=lambda: conectar_camara_2(combobox_camara2.current(), label_imagen2))
@@ -259,7 +309,7 @@ boton_conectar2.place(x=390, y=370, width=120, height=30)
 boton_desconectar2 = tk.Button(ventana, text="Desconectar", command=desconectar_camara_2, state=tk.DISABLED)
 boton_desconectar2.place(x=520, y=370, width=120, height=30)
 # Captura camara 2
-boton_capturar2 = tk.Button(ventana, text="Capturar", command=lambda: capturar_guardar_mostrar(captura2, etiqueta_ruta.cget("text").split(": "), entrada_nombre.get(), label_captura2, 2, entrada_tiempo_captura.get(), entrada_cantidad_capturas.get(), entrada_intervalo_capturas.get()))
+boton_capturar2 = tk.Button(ventana, text="Capturar", command=lambda: capturar_guardar_mostrar(captura2, entrada_nombre.get(), label_captura2, 2))
 boton_capturar2.place(x=470, y=720, width=120, height=30)
 
 # Cuadros de imagen grises
@@ -330,23 +380,32 @@ label_estado.place(x=700, y=80, width=200, height=30)
 # Boton para enviar datos a Arduino
 boton_enviar = tk.Button(ventana, text="Enviar", command=enviar_datos_arduino_desde_ui)
 boton_enviar.place(x=740, y=220, width=120, height=30)
+# Boton para pausar la rotacion
+boton_enviar_detencion = tk.Button(ventana, text="Detener", command=dato_detencion_giratoria)
+boton_enviar_detencion.place(x=740, y=250, width=120, height=30)
+# Boton para calibrar la mesa
+boton_calibracion = tk.Button(ventana, text="Calibrar", command=dato_calibracion_mesa)
+boton_calibracion.place(x=740, y=280, width=120, height=30)
 
 # Titulo indicativo de envio de datos
 label_datos = tk.Label(ventana, text="Envio de datos para giro")
 label_datos.place(x=700, y=130, width=200, height=20)
 
-# Titulo para saber donde esta el cuadro de texto de velocidad
+# Titulo para saber donde esta el combobox de texto de velocidad
 label_velocidad = tk.Label(ventana, text="Velocidad:")
 label_velocidad.place(x=700, y=160, width=150, height=20)
-# Cuadro de texto para ingresar la velocidad
-entrada_velocidad = tk.Entry(ventana)
-entrada_velocidad.place(x=820, y=160, width=50, height=20)
-# Titulo para saber donde esta el cuadro de texto de posicion
-label_posicion = tk.Label(ventana, text="Posición:")
-label_posicion.place(x=700, y=190, width=150, height=20)
-# Cuadro de texto para ingresar la posicion
-entrada_posicion = tk.Entry(ventana)
-entrada_posicion.place(x=820, y=190, width=50, height=20)
+# Combo box para seleccionar la velocidad
+combobox_velocidades = ttk.Combobox(ventana, values=velocidades_predefinidas, state="readonly")
+combobox_velocidades.set("Selecciona una velocidad")
+combobox_velocidades.place(x=820, y=160, width=160, height=20)
+
+# Titulo para saber donde esta el combobox de angulo
+label_angulo = tk.Label(ventana, text="Angulo:")
+label_angulo.place(x=700, y=190, width=150, height=20)
+# Combo box para seleccionar el angulo
+combobox_angulos = ttk.Combobox(ventana, values=angulos_predefinidos, state="readonly")
+combobox_angulos.set("Selecciona un angulo")
+combobox_angulos.place(x=820, y=190, width=160, height=20)
 
 # Iniciar la ventana
 ventana.mainloop()
